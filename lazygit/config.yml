@@ -1,0 +1,16 @@
+gui:
+  showIcons: false
+  theme:
+    selectedLineBgColor:
+      - blue
+    selectedRangeBgColor:
+      - blue
+    activeBorderColor:
+      - white
+    inactiveBorderColor:
+      - black
+
+startupPopupVersion: 1
+notARepository: "skip"
+disableStartupPopups: true
+promptToReturnFromSubprocess: false

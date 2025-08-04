@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# List available Wi-Fi networks
+networks=$(nmcli -t -f active,ssid dev wifi | awk -F: '!seen[$2]++ {print ($1=="yes" ? "* " : "  ") $2}')
+
+# Show list with Fuzzel
+selected=$(echo "$networks" | fuzzel --dmenu --prompt="Wi-Fi:")
+
+# Clean up selection
+ssid=$(echo "$selected" | sed 's/^[* ]*//')
+
+# Exit if nothing selected
+[ -z "$ssid" ] && exit 1
+
+# Try to bring up the saved connection
+nmcli connection up id "$ssid"
