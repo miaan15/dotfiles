@@ -7,7 +7,7 @@ set $term kitty
 set $menu fuzzel
 set $screenshot grim ~/images/screenshots/scrn-$(date +"%Y-%m-%d-%H-%M-%S").png
 set $screenclip slurp | grim -g - ~/images/screenshots/scrn-$(date +"%Y-%m-%d-%H-%M-%S").png
-set $background ~/.images/deadlock-wallpaper.jpg
+set $background ~/images/deadlock-wallpaper.jpg
 
 set $cl_high #009ddc
 set $cl_indi #d9d8d8
