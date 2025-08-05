@@ -23,3 +23,6 @@ vim.keymap.set("n", "gbn", ":bnext<CR>", { desc = "Next buffer" })
 vim.keymap.set("n", "gbm", ":bprevious<CR>", { desc = "Previous buffer" })
 vim.keymap.set("n", "gbx", ":bdelete<CR>", { desc = "Closes buffer" })
 vim.keymap.set("n", "gbb", "<C-^>", { desc = "Switch to last buffer" })
+
+vim.keymap.set("n", "<leader>pw", "viwpyb", { desc = "Paste inner word" })
+vim.keymap.set("n", "<leader>pW", "viWpyb", { desc = "Paste inner WORD" })

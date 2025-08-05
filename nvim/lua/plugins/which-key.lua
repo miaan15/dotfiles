@@ -41,6 +41,7 @@ return {
       { "<leader>t", group = "[T]oggle" },
       { "gb", group = "[B]uffer" },
       { "gh", group = "[H]arpoon" },
+      { "<leader>p", group = "[P]aste" },
     },
   },
 }
