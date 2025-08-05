@@ -1,6 +1,6 @@
 # Variables
 set $mod Mod4
-set $lock ~/.local/bin/scripts/lock.sh
+set $lock swaylock -C ~/.config/swaylock/config
 set $power ~/.config/fuzzel/custom/power
 set $wifi ~/.config/fuzzel/custom/nmcli
 set $term kitty

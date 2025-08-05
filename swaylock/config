@@ -1,0 +1,12 @@
+image=~/images/deadlock-wallpaper.jpg
+scaling=fill
+
+font=monospace
+font-size=20
+
+indicator-idle-visible
+ignore-empty-password
+show-failed-attempts
+
+indicator-radius=80
+indicator-thickness=8
