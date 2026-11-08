@@ -76,26 +76,26 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 local lsp_term_group = vim.api.nvim_create_augroup("LspTerminalToggle", { clear = true })
 
--- this shit is for windows cus it keep locking stuff while try to run
-vim.api.nvim_create_autocmd("BufEnter", {
-    group = lsp_term_group,
-    callback = function(args)
-        local buftype = vim.bo[args.buf].buftype
-
-        if buftype == "terminal" then
-            for _, client in ipairs(vim.lsp.get_clients()) do
-                client:stop()
-            end
-        else
-            local ft = vim.bo[args.buf].filetype
-            if ft == "c" or ft == "cpp" then
-                vim.lsp.enable("clangd")
-            elseif ft == "odin" then
-                vim.lsp.enable("ols")
-            end
-        end
-    end,
-})
+-- -- this shit is for windows cus it keep locking stuff while try to run
+-- vim.api.nvim_create_autocmd("BufEnter", {
+--     group = lsp_term_group,
+--     callback = function(args)
+--         local buftype = vim.bo[args.buf].buftype
+--
+--         if buftype == "terminal" then
+--             for _, client in ipairs(vim.lsp.get_clients()) do
+--                 client:stop()
+--             end
+--         else
+--             local ft = vim.bo[args.buf].filetype
+--             if ft == "c" or ft == "cpp" then
+--                 vim.lsp.enable("clangd")
+--             elseif ft == "odin" then
+--                 vim.lsp.enable("ols")
+--             end
+--         end
+--     end,
+-- })
 
 vim.api.nvim_create_user_command('TrimWhitespaces', function()
     local save_cursor = vim.api.nvim_win_get_cursor(0)
@@ -265,7 +265,6 @@ require("lazy").setup({
                         ["@function.builtin"]    = { link = "@function" },
                         ["@property"]            = { link = "@lsp.type.variable" },
                         ["@variable.parameter"]  = { link = "@lsp.type.variable" },
-                        ["@lsp.type.enumMember"] = { link = "@lsp.type.variable" },
                         ["Macro"]                = { link = "Statement" },
                         ["Repeat"]               = { link = "Statement" },
                         ["Conditional"]          = { link = "Statement" },
@@ -276,6 +275,7 @@ require("lazy").setup({
                         ["String"]               = { link = "Number" },
                         ["Constant"]             = { link = "Number" },
                         ["Boolean"]              = { link = "Number" },
+                        ["@lsp.type.enumMember"] = { link = "Number" },
                     }
                 end,
             })
