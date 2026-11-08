@@ -82,6 +82,8 @@
 #include "util.h"
 #include "drwl.h"
 
+#include "sysdata.h"
+
 /* macros */
 #define CLEANMASK(mask)         (mask & ~WLR_MODIFIER_CAPS)
 #define VISIBLEON(C, M)         ((M) && (C)->mon == (M) && ((C)->tags & (M)->tagset[(M)->seltags]))
@@ -291,6 +293,7 @@ static void arrange(Monitor *m);
 static void arrangelayer(Monitor *m, struct wl_list *list,
 		struct wlr_box *usable_area, int exclusive);
 static void arrangelayers(Monitor *m);
+static void autostartexec(void);
 static void axisnotify(struct wl_listener *listener, void *data);
 static bool baracceptsinput(struct wlr_scene_buffer *buffer, double *sx, double *sy);
 static void bufdestroy(struct wlr_buffer *buffer);
@@ -368,6 +371,7 @@ static void pointerfocus(Client *c, LayerSurface* l, struct wlr_surface *surface
 static void printstatus(void);
 static void powermgrsetmode(struct wl_listener *listener, void *data);
 static void quit(const Arg *arg);
+static void refreshbar(const Arg *arg);
 static void rendermon(struct wl_listener *listener, void *data);
 static void requestdecorationmode(struct wl_listener *listener, void *data);
 static void requeststartdrag(struct wl_listener *listener, void *data);
@@ -389,6 +393,7 @@ static void startdrag(struct wl_listener *listener, void *data);
 static int statusin(int fd, unsigned int mask, void *data);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
+static int tickbar(void *data);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
@@ -477,6 +482,8 @@ static const struct wlr_buffer_impl buffer_impl = {
     .end_data_ptr_access = bufdataend,
 };
 
+static struct wl_event_source *bar_timer;
+
 /* global event handlers */
 static struct wl_listener cursor_axis = {.notify = axisnotify};
 static struct wl_listener cursor_button = {.notify = buttonpress};
@@ -521,6 +528,9 @@ static struct wl_listener new_xwayland_surface = {.notify = createnotifyx11};
 static struct wl_listener xwayland_ready = {.notify = xwaylandready};
 static struct wlr_xwayland *xwayland;
 #endif
+
+static pid_t *autostart_pids;
+static size_t autostart_len;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -697,6 +707,27 @@ arrangelayers(Monitor *m)
 			client_notify_enter(l->layer_surface->surface, wlr_seat_get_keyboard(seat));
 			return;
 		}
+	}
+}
+
+void
+autostartexec(void) {
+	const char *const *p;
+	size_t i = 0;
+
+	/* count entries */
+	for (p = autostart; *p; autostart_len++, p++)
+		while (*++p);
+
+	autostart_pids = calloc(autostart_len, sizeof(pid_t));
+	for (p = autostart; *p; i++, p++) {
+		if ((autostart_pids[i] = fork()) == 0) {
+			setsid();
+			execvp(*p, (char *const *)p);
+			die("dwl: execvp %s:", *p);
+		}
+		/* skip arguments */
+		while (*++p);
 	}
 }
 
@@ -941,12 +972,23 @@ checkidleinhibitor(struct wlr_surface *exclude)
 void
 cleanup(void)
 {
+	size_t i;
+
 	cleanuplisteners();
 #ifdef XWAYLAND
 	wlr_xwayland_destroy(xwayland);
 	xwayland = NULL;
 #endif
 	wl_display_destroy_clients(dpy);
+
+	/* kill child processes */
+	for (i = 0; i < autostart_len; i++) {
+		if (0 < autostart_pids[i]) {
+			kill(autostart_pids[i], SIGTERM);
+			waitpid(autostart_pids[i], NULL, 0);
+		}
+	}
+
 	if (child_pid > 0) {
 		kill(-child_pid, SIGTERM);
 		waitpid(child_pid, NULL, 0);
@@ -1679,8 +1721,12 @@ drawbar(Monitor *m)
 {
     int rect_w = m->b.width;
     int rect_h = m->drw->font->height + m->lrpad;
-    int tag_y = 0;
-    int mode_y = 0;
+    int tag_y;
+    int mode_y;
+    int time_y;
+    int battery_y;
+    int volume_y;
+    char str[8];
 	uint32_t i, occ = 0, urg = 0;
 	Client *c;
 	Buffer *buf;
@@ -1698,15 +1744,45 @@ drawbar(Monitor *m)
 			urg |= c->tags;
 	}
 	c = focustop(m);
+
+    // tags
+    tag_y = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
 		drwl_setscheme(m->drw, colors[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
 		drwl_text(m->drw, 0, tag_y, rect_w, rect_h, m->lrpad / 2, tags[i], urg & 1 << i);
+
+        if (((occ >> i) & 1) != 0) {
+            drwl_rect(m->drw, 0, tag_y, borderpx, rect_h, 1, 0);
+        }
+
         tag_y += rect_h;
 	}
 
-    mode_y = m->b.height - rect_h;
+    // layout mode
+    mode_y = tag_y + borderpx;
 	drwl_setscheme(m->drw, colors[SchemeNorm]);
 	drwl_text(m->drw, 0, mode_y, rect_w, rect_h, m->lrpad / 2, m->ltsymbol, 0);
+
+    // time
+    time_y = m->b.height - rect_h;
+    char time_str[6]; gettime(time_str);
+	drwl_setscheme(m->drw, colors[SchemeNorm]);
+	drwl_text(m->drw, 0, time_y, rect_w, rect_h, borderpx, time_str, 0);
+
+    // battery
+    battery_y = time_y - borderpx - rect_h;
+    char battery_str[6]; getbattery(battery_str);
+    sprintf(str, "B:%s", battery_str);
+	drwl_setscheme(m->drw, colors[SchemeNorm]);
+	drwl_text(m->drw, 0, battery_y, rect_w, rect_h, borderpx * 2, str, 0);
+
+    // volume
+    volume_y = battery_y - borderpx - rect_h;
+    char volume_str[6]; getvolume(volume_str);
+    sprintf(str, "V:%s", volume_str);
+	drwl_setscheme(m->drw, colors[SchemeNorm]);
+	drwl_text(m->drw, 0, volume_y, rect_w, rect_h, borderpx * 2, str, 0);
+
 
 	wlr_scene_buffer_set_dest_size(m->scene_buffer,
 		m->b.real_width, m->b.real_height);
@@ -1895,10 +1971,25 @@ gpureset(struct wl_listener *listener, void *data)
 void
 handlesig(int signo)
 {
-	if (signo == SIGCHLD)
-		while (waitpid(-1, NULL, WNOHANG) > 0);
-	else if (signo == SIGINT || signo == SIGTERM)
+	if (signo == SIGCHLD) {
+		pid_t pid, *p, *lim;
+		while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+			if (pid == child_pid)
+				child_pid = -1;
+			if (!(p = autostart_pids))
+				continue;
+			lim = &p[autostart_len];
+
+			for (; p < lim; p++) {
+				if (*p == pid) {
+					*p = -1;
+					break;
+				}
+			}
+		}
+	} else if (signo == SIGINT || signo == SIGTERM) {
 		quit(NULL);
+	}
 }
 
 void
@@ -2539,6 +2630,12 @@ quit(const Arg *arg)
 }
 
 void
+refreshbar(const Arg *arg)
+{
+    drawbars();
+}
+
+void
 rendermon(struct wl_listener *listener, void *data)
 {
 	/* This function is called every time an output is ready to display a frame,
@@ -2630,6 +2727,7 @@ run(char *startup_cmd)
 		die("startup: backend_start");
 
 	/* Now that the socket exists and the backend is started, run the startup command */
+	autostartexec();
 	if (startup_cmd) {
 		if ((child_pid = fork()) < 0)
 			die("startup: fork:");
@@ -3130,6 +3228,14 @@ tagmon(const Arg *arg)
 	Client *sel = focustop(selmon);
 	if (sel)
 		setmon(sel, dirtomon(arg->i), 0);
+}
+
+int
+tickbar(void *data)
+{
+    drawbars();
+    wl_event_source_timer_update(bar_timer, 200);
+	return 0;
 }
 
 void
@@ -3719,7 +3825,22 @@ main(int argc, char *argv[])
 	if (!getenv("XDG_RUNTIME_DIR"))
 		die("XDG_RUNTIME_DIR must be set");
 	setup();
+
+    { // my stuff
+        sysdata_init();
+
+        bar_timer = wl_event_loop_add_timer(event_loop, tickbar, NULL);
+        wl_event_source_timer_update(bar_timer, 200);
+    }
+
 	run(startup_cmd);
+
+    { // my stuff
+        sysdata_cleanup();
+
+        if (bar_timer) wl_event_source_remove(bar_timer);
+    }
+
 	cleanup();
 	return EXIT_SUCCESS;
 

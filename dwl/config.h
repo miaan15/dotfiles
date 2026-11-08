@@ -10,8 +10,8 @@ static const int bypass_surface_visibility = 0;
 static const unsigned int borderpx         = 2;
 static const unsigned int snap             = 32; /* snap pixel */
 static const int showbar                   = 1; /* 0 means no bar */
-static const int barwidth                  = 36;
-static const char *fonts[]                 = {"monospace:size=10"};
+static const int barwidth                  = 40;
+static const char *fonts[]                 = {"monospace:size=9"};
 static const float rootcolor[]             = COLOR(0x000000ff);
 static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You can also use glsl colors */
 
@@ -27,6 +27,11 @@ static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 /* logging */
 static int log_level = WLR_ERROR;
+
+static const char *const autostart[] = {
+	"swayidle", "-w", "timeout", "1200", "systemctl suspend", NULL,
+	NULL /* terminate */
+};
 
 static const Rule rules[] = {
     /* app_id             title       tags mask     isfloating   monitor */
@@ -89,8 +94,8 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", NULL };
 
-static const char *upvol[]   = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
-static const char *downvol[] = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
+static const char *upvol[]   = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "2%+", NULL };
+static const char *downvol[] = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "2%-", NULL };
 static const char *mutevol[] = { "wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle", NULL };
 
 static const char *upbl[]    = { "brightnessctl", "set", "5%+", NULL };
@@ -110,6 +115,8 @@ static const Key keys[] = {
     { 0,                         XF86XK_MonBrightnessDown, spawn,            {.v = downbl} },
 
     { MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Escape,           quit,             {0} },
+
+    { MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_b,                togglebar,             {0} },
 
     { MODKEY,                    XKB_KEY_Right,            focusstack,       {.i = +1} },
     { MODKEY,                    XKB_KEY_Left,             focusstack,       {.i = -1} },
