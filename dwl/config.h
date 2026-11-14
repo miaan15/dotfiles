@@ -18,7 +18,7 @@ static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You ca
 static unsigned int colors[][3]            = {
 	/*               fg          bg          border    */
 	[SchemeNorm] = { 0xbbbbbbff, 0x222222ff, 0x444444ff },
-	[SchemeSel]  = { 0xeeeeeeff, 0x005577ff, 0x005577ff },
+	[SchemeSel]  = { 0xeeeeeeff, 0x00940cff, 0x00940cff },
 	[SchemeUrg]  = { 0,          0,          0x770000ff },
 };
 
@@ -29,13 +29,17 @@ static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 static int log_level = WLR_ERROR;
 
 static const char *const autostart[] = {
-	"swayidle", "-w", "timeout", "1200", "systemctl suspend", NULL,
+	"swayidle", "-w", "timeout", "600", "systemctl suspend", NULL,
+    "/bin/sh", "-c", "./.local/src/dwl/startup.sh", NULL,
+    "easyeffects", "&", NULL,
 	NULL /* terminate */
 };
 
 static const Rule rules[] = {
     /* app_id             title       tags mask     isfloating   monitor */
     { "zen",              NULL,       1 << 1,       0,           -1 },
+    { "discord",          NULL,       1 << 2,       0,           -1 },
+    { "obs",              NULL,       1 << 4,       0,           -1 },
 };
 
 /* layout(s) */
@@ -94,8 +98,8 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", NULL };
 
-static const char *upvol[]   = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "2%+", NULL };
-static const char *downvol[] = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "2%-", NULL };
+static const char *upvol[]   = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%+", NULL };
+static const char *downvol[] = { "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-", NULL };
 static const char *mutevol[] = { "wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle", NULL };
 
 static const char *upbl[]    = { "brightnessctl", "set", "5%+", NULL };
